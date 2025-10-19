@@ -9,15 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.androidwebviewplayground.ui.theme.AndroidWebViewPlayGroundTheme
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,32 +20,31 @@ class MainActivity : ComponentActivity() {
             var darkTheme by remember { mutableStateOf(false) }
             AndroidWebViewPlayGroundTheme(darkTheme = darkTheme) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    var showWebView by remember { mutableStateOf(false) }
                     var url by remember { mutableStateOf("https://www.google.com") }
                     var showUrlBar by remember { mutableStateOf(true) }
                     var showNavBar by remember { mutableStateOf(true) }
 
-                    if (showWebView) {
-                        WebViewScreen(
-                            url = url,
-                            showUrlBar = showUrlBar,
-                            showNavBar = showNavBar,
-                            onClose = { showWebView = false }
-                        )
-                    } else {
-                        FormScreen(
-                            url = url,
-                            onUrlChange = { url = it },
-                            showUrlBar = showUrlBar,
-                            onShowUrlBarChange = { showUrlBar = it },
-                            showNavBar = showNavBar,
-                            onShowNavBarChange = { showNavBar = it },
-                            darkTheme = darkTheme,
-                            onDarkThemeChange = { darkTheme = it },
-                            onOpenWebView = { showWebView = true },
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
+                    FormScreen(
+                        url = url,
+                        onUrlChange = { url = it },
+                        showUrlBar = showUrlBar,
+                        onShowUrlBarChange = { showUrlBar = it },
+                        showNavBar = showNavBar,
+                        onShowNavBarChange = { showNavBar = it },
+                        darkTheme = darkTheme,
+                        onDarkThemeChange = { darkTheme = it },
+                        onOpenWebView = {
+                            val context = this@MainActivity
+                            val intent = android.content.Intent(context, WebViewActivity::class.java).apply {
+                                putExtra("url", url)
+                                putExtra("showUrlBar", showUrlBar)
+                                putExtra("showNavBar", showNavBar)
+                                putExtra("darkTheme", darkTheme)
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.padding(innerPadding)
+                    )
                 }
             }
         }
@@ -119,63 +111,6 @@ fun FormScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Open WebView")
-        }
-    }
-}
-
-@Composable
-fun WebViewScreen(
-    url: String,
-    showUrlBar: Boolean,
-    showNavBar: Boolean,
-    onClose: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (showUrlBar) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = url,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
-                }
-            }
-        }
-        AndroidView(
-            factory = { context ->
-                WebView(context).apply {
-                    settings.javaScriptEnabled = true
-                    webViewClient = WebViewClient()
-                    loadUrl(url)
-                }
-            },
-            modifier = Modifier.weight(1f)
-        )
-        if (showNavBar) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                // 簡易的な戻る・進む・閉じるボタン
-                val context = LocalContext.current
-                val webView = remember { mutableStateOf<WebView?>(null) }
-                Button(onClick = {
-                    webView.value?.goBack()
-                }) { Text("Back") }
-                Button(onClick = {
-                    webView.value?.goForward()
-                }) { Text("Forward") }
-                Button(onClick = onClose) { Text("Close") }
-            }
         }
     }
 }
