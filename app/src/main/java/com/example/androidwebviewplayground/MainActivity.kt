@@ -4,26 +4,55 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.example.androidwebviewplayground.ui.theme.AndroidWebViewPlayGroundTheme
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AndroidWebViewPlayGroundTheme {
+            var darkTheme by remember { mutableStateOf(false) }
+            AndroidWebViewPlayGroundTheme(darkTheme = darkTheme) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    var showWebView by remember { mutableStateOf(false) }
+                    var url by remember { mutableStateOf("https://www.google.com") }
+                    var showUrlBar by remember { mutableStateOf(true) }
+                    var showNavBar by remember { mutableStateOf(true) }
+
+                    if (showWebView) {
+                        WebViewScreen(
+                            url = url,
+                            showUrlBar = showUrlBar,
+                            showNavBar = showNavBar,
+                            onClose = { showWebView = false }
+                        )
+                    } else {
+                        FormScreen(
+                            url = url,
+                            onUrlChange = { url = it },
+                            showUrlBar = showUrlBar,
+                            onShowUrlBarChange = { showUrlBar = it },
+                            showNavBar = showNavBar,
+                            onShowNavBarChange = { showNavBar = it },
+                            darkTheme = darkTheme,
+                            onDarkThemeChange = { darkTheme = it },
+                            onOpenWebView = { showWebView = true },
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                    }
                 }
             }
         }
@@ -31,17 +60,121 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
+fun FormScreen(
+    url: String,
+    onUrlChange: (String) -> Unit,
+    showUrlBar: Boolean,
+    onShowUrlBarChange: (Boolean) -> Unit,
+    showNavBar: Boolean,
+    onShowNavBarChange: (Boolean) -> Unit,
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+    onOpenWebView: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
         modifier = modifier
-    )
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("WebView Playground", style = MaterialTheme.typography.headlineMedium)
+        OutlinedTextField(
+            value = url,
+            onValueChange = onUrlChange,
+            label = { Text("URL") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Display URL Bar")
+            Switch(checked = showUrlBar, onCheckedChange = onShowUrlBarChange)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Display Navigation Bar")
+            Switch(checked = showNavBar, onCheckedChange = onShowNavBarChange)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Light / Dark Theme")
+            Switch(checked = darkTheme, onCheckedChange = onDarkThemeChange)
+        }
+        Spacer(
+            modifier = Modifier
+                .weight(1f)
+        )
+        Button(
+            onClick = onOpenWebView,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Open WebView")
+        }
+    }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
-    AndroidWebViewPlayGroundTheme {
-        Greeting("Android")
+fun WebViewScreen(
+    url: String,
+    showUrlBar: Boolean,
+    showNavBar: Boolean,
+    onClose: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (showUrlBar) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = url,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Default.Close, contentDescription = "Close")
+                }
+            }
+        }
+        AndroidView(
+            factory = { context ->
+                WebView(context).apply {
+                    webViewClient = WebViewClient()
+                    loadUrl(url)
+                }
+            },
+            modifier = Modifier.weight(1f)
+        )
+        if (showNavBar) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // 簡易的な戻る・進む・閉じるボタン
+                val context = LocalContext.current
+                val webView = remember { mutableStateOf<WebView?>(null) }
+                Button(onClick = {
+                    webView.value?.goBack()
+                }) { Text("Back") }
+                Button(onClick = {
+                    webView.value?.goForward()
+                }) { Text("Forward") }
+                Button(onClick = onClose) { Text("Close") }
+            }
+        }
     }
 }
