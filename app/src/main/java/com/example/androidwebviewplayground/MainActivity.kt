@@ -151,6 +151,7 @@ fun WebViewScreen(
         AndroidView(
             factory = { context ->
                 WebView(context).apply {
+                    settings.javaScriptEnabled = true
                     webViewClient = WebViewClient()
                     loadUrl(url)
                 }
